@@ -1,0 +1,33 @@
+# Secrets and environment files
+.env
+.env.local
+.env.*.local
+*.env
+
+# SQLite Databases
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+powerplay.db
+
+# Python & Testing artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# Editor and IDE directories
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
