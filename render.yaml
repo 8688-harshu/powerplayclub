@@ -8,6 +8,10 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.8
+      - key: WHATSAPP_PHONE
+        value: "919701167899"
+      - key: WHATSAPP_DISPLAY_PHONE
+        value: "+91 97011 67899"
       - key: POWERPLAY_OWNER_EMAIL
         sync: false
       - key: POWERPLAY_OWNER_PASSWORD
