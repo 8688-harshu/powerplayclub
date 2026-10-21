@@ -384,7 +384,7 @@ def admin_login(payload: AdminLoginRequest):
 def request_pin_recovery():
     """
     Owner action: Initiates Forgot PIN recovery by generating a 6-digit OTP
-    and returning a prefilled WhatsApp link addressed to the owner (+91 95517 45555).
+    and returning a prefilled WhatsApp link addressed to the owner (+91 97011 67899).
     """
     recovery = create_pin_recovery_code(expiry_minutes=10)
     code = recovery["code"]

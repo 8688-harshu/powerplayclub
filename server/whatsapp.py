@@ -1,14 +1,15 @@
 """
 POWERPLAY CLUB - Centralized WhatsApp Click-to-Chat Integration
-Standard Destination: +91 95517 45555
-Format: https://wa.me/919551745555?text=URL_ENCODED_MESSAGE
+Standard Destination: +91 97011 67899
+Format: https://wa.me/919701167899?text=URL_ENCODED_MESSAGE
 """
 
+import os
 import urllib.parse
 from typing import Dict, Any, List, Optional
 
-WHATSAPP_PHONE = "919551745555"
-WHATSAPP_DISPLAY_PHONE = "+91 95517 45555"
+WHATSAPP_PHONE = os.environ.get("WHATSAPP_PHONE", "919701167899")
+WHATSAPP_DISPLAY_PHONE = os.environ.get("WHATSAPP_DISPLAY_PHONE", "+91 97011 67899")
 VENUE_NAME = "PowerPlay Club Bhimavaram"
 
 def format_hour_12h(hour: int) -> str:
