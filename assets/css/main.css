@@ -109,6 +109,11 @@ body {
   box-shadow: none !important;
   border-radius: 0 !important;
   pointer-events: none !important;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+.preloader-video-wrap video.is-playing {
+  opacity: 1;
 }
 .preloader-video-wrap video::-webkit-media-controls,
 .preloader-video-wrap video::-webkit-media-controls-start-playback-button,
@@ -400,6 +405,11 @@ p  { color: var(--muted); line-height: 1.7; margin: 0; }
   object-fit: cover;
   z-index: 0;
   pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+.hero-video.is-playing {
+  opacity: 1;
 }
 .hero-video::-webkit-media-controls,
 .hero-video::-webkit-media-controls-start-playback-button,

@@ -2186,10 +2186,10 @@
       const p = heroVideo.play();
       if (p !== undefined) {
         p.then(() => {
+          heroVideo.classList.add('is-playing');
           heroVideo.style.display = 'block';
         }).catch(() => {
-          // Autoplay blocked (e.g. iOS Low Power Mode) — hide video element so no native play button appears!
-          // The CSS background-image fallback on .hero displays cleanly.
+          heroVideo.classList.remove('is-playing');
           heroVideo.style.display = 'none';
         });
       }
@@ -2199,12 +2199,18 @@
     const resumeOnInteraction = () => {
       if (heroVideo.paused) {
         heroVideo.play().then(() => {
+          heroVideo.classList.add('is-playing');
           heroVideo.style.display = 'block';
         }).catch(() => {});
       }
     };
     window.addEventListener('touchstart', resumeOnInteraction, { once: true, passive: true });
     window.addEventListener('click', resumeOnInteraction, { once: true, passive: true });
+
+    heroVideo.addEventListener('playing', () => {
+      heroVideo.classList.add('is-playing');
+      heroVideo.style.display = 'block';
+    });
 
     if (heroVideo.readyState >= 2) {
       attemptPlay();
@@ -2215,6 +2221,7 @@
 
     // Handle error gracefully by showing background image
     heroVideo.addEventListener('error', () => {
+      heroVideo.classList.remove('is-playing');
       heroVideo.style.display = 'none';
     }, { once: true });
   }());
