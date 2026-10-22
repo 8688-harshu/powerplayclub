@@ -12,7 +12,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/main.css?v=5">
+  <link rel="stylesheet" href="assets/css/main.css?v=6">
   <link rel="stylesheet" href="assets/css/admin.css">
 </head>
 <body>
@@ -26,8 +26,13 @@
     <script>
       (function() {
         var p = document.getElementById('preloader');
-        var v = document.getElementById('preloaderVideo');
         if (!p) return;
+        // Immediate bypass on mobile so user is never stuck on a frozen loading image
+        if (window.innerWidth <= 768 || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+          p.style.display = 'none';
+          return;
+        }
+        var v = document.getElementById('preloaderVideo');
         var done = false;
         function dismiss() {
           if (done) return;
@@ -46,7 +51,6 @@
               v.classList.add('is-playing');
               v.addEventListener('ended', dismiss, { once: true });
             }).catch(function() {
-              // Autoplay rejected on mobile — dismiss preloader instantly
               dismiss();
             });
           }
@@ -921,6 +925,6 @@
       }, { passive: true });
     }
   </script>
-  <script src="assets/js/main.js?v=5"></script>
+  <script src="assets/js/main.js?v=6"></script>
 </body>
 </html>

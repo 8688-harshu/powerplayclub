@@ -2231,6 +2231,10 @@
   (function initPreloader() {
     const preloader = document.getElementById('preloader');
     if (!preloader) return;
+    if (window.innerWidth <= 768 || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+      preloader.style.display = 'none';
+      return;
+    }
     const video = document.getElementById('preloaderVideo');
     let dismissed = false;
     function dismissPreloader() {
