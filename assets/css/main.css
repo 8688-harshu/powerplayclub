@@ -1784,8 +1784,7 @@ footer {
     line-height: 1.05;
     word-break: break-word;
   }
-  .hero-desc { font-size: 0.96rem; }
-  .hero-actions { gap: 10px; flex-wrap: wrap; }
+  .hero-actions { gap: 10px; flex-wrap: wrap; margin-bottom: 24px; }
   .hero-actions .btn-primary,
   .hero-actions .btn-ghost {
     min-height: 46px;
