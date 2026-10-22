@@ -108,6 +108,17 @@ body {
   outline: none !important;
   box-shadow: none !important;
   border-radius: 0 !important;
+  pointer-events: none !important;
+}
+.preloader-video-wrap video::-webkit-media-controls,
+.preloader-video-wrap video::-webkit-media-controls-start-playback-button,
+.preloader-video-wrap video::-webkit-media-controls-play-button,
+.preloader-video-wrap video::-webkit-media-controls-enclosure {
+  display: none !important;
+  -webkit-appearance: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
 }
 a { color: inherit; text-decoration: none; }
 img { max-width: 100%; display: block; }
@@ -388,6 +399,17 @@ p  { color: var(--muted); line-height: 1.7; margin: 0; }
   height: 100%;
   object-fit: cover;
   z-index: 0;
+  pointer-events: none;
+}
+.hero-video::-webkit-media-controls,
+.hero-video::-webkit-media-controls-start-playback-button,
+.hero-video::-webkit-media-controls-play-button,
+.hero-video::-webkit-media-controls-enclosure {
+  display: none !important;
+  -webkit-appearance: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
 }
 .hero-video-overlay {
   position: absolute;

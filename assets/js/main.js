@@ -2162,31 +2162,60 @@
 })();
   // --- VIDEO HERO — all screen sizes ---
   // Mobile browsers (Chrome Android, Safari iOS) allow autoplay only when
-  // the video is muted + playsinline, both of which are already set on the
-  // <video> element in the HTML.  We let the browser handle autoplay
-  // natively; JS only nudges it after metadata is ready and handles errors.
+  // the video is muted + playsinline, both of which are set on the <video>
+  // element and in JS properties. If autoplay is rejected (e.g. iOS Low Power Mode),
+  // we hide the video element so no native play button renders over the turf.
   (function initHeroVideo() {
     const heroVideo = document.querySelector('.hero-video');
     if (!heroVideo) return;
     const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (prefersReducedMotion) {
       try { heroVideo.pause(); } catch (_) {}
+      heroVideo.style.display = 'none';
       return;
     }
+    heroVideo.muted = true;
+    heroVideo.defaultMuted = true;
+    heroVideo.playsInline = true;
+    heroVideo.setAttribute('muted', '');
+    heroVideo.setAttribute('playsinline', '');
+    heroVideo.setAttribute('webkit-playsinline', '');
     heroVideo.setAttribute('preload', 'metadata');
+
     function attemptPlay() {
-      heroVideo.play().catch(() => {});
+      const p = heroVideo.play();
+      if (p !== undefined) {
+        p.then(() => {
+          heroVideo.style.display = 'block';
+        }).catch(() => {
+          // Autoplay blocked (e.g. iOS Low Power Mode) — hide video element so no native play button appears!
+          // The CSS background-image fallback on .hero displays cleanly.
+          heroVideo.style.display = 'none';
+        });
+      }
     }
+
+    // Try resuming playback on user interaction if autoplay was initially blocked
+    const resumeOnInteraction = () => {
+      if (heroVideo.paused) {
+        heroVideo.play().then(() => {
+          heroVideo.style.display = 'block';
+        }).catch(() => {});
+      }
+    };
+    window.addEventListener('touchstart', resumeOnInteraction, { once: true, passive: true });
+    window.addEventListener('click', resumeOnInteraction, { once: true, passive: true });
+
     if (heroVideo.readyState >= 2) {
       attemptPlay();
     } else {
       heroVideo.addEventListener('loadeddata', attemptPlay, { once: true });
+      heroVideo.addEventListener('canplay', attemptPlay, { once: true });
     }
-    // Handle error gracefully without hiding the poster image
+
+    // Handle error gracefully by showing background image
     heroVideo.addEventListener('error', () => {
-      if (!heroVideo.getAttribute('poster')) {
-        heroVideo.style.display = 'none';
-      }
+      heroVideo.style.display = 'none';
     }, { once: true });
   }());
   /* ====================================================
@@ -2206,24 +2235,37 @@
         try {
           if (video) video.pause();
         } catch (_) {}
-      }, 700);
+      }, 400);
     }
     // Tap anywhere to skip straight to home page immediately
     preloader.addEventListener('click', dismissPreloader);
     if (video) {
       video.muted = true;
+      video.defaultMuted = true;
       video.playsInline = true;
       video.setAttribute('muted', '');
       video.setAttribute('playsinline', '');
+      video.setAttribute('webkit-playsinline', '');
+
+      // Handle video error or stall by dismissing immediately
+      video.addEventListener('error', dismissPreloader, { once: true });
+      video.addEventListener('stalled', () => {
+        if (video.currentTime === 0) dismissPreloader();
+      }, { once: true });
+
       const playPromise = video.play();
       if (playPromise !== undefined) {
-        playPromise.catch(() => {});
+        playPromise.catch(() => {
+          // If autoplay is blocked on mobile (e.g. iOS Low Power Mode),
+          // dismiss preloader immediately so screen is never stuck!
+          dismissPreloader();
+        });
       }
       // Transition smoothly as soon as animation finishes
       video.addEventListener('ended', () => {
-        setTimeout(dismissPreloader, 250);
+        setTimeout(dismissPreloader, 100);
       }, { once: true });
     }
-    // Fallback: Ensure home page always opens within 10.5s max even if video stalls
-    setTimeout(dismissPreloader, 10500);
+    // Fallback: Ensure home page always opens within 2.8s max even if video stalls
+    setTimeout(dismissPreloader, 2800);
   }());
