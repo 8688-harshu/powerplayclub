@@ -61,8 +61,9 @@
   </header>
   <main>
     <section class="hero" id="home">
-      <video class="hero-video" autoplay muted loop playsinline poster="assets/images/Cirket.jpeg" aria-hidden="true">
-        <source src="assets/images/IMG_2207.MOV" type="video/mp4">
+      <video class="hero-video" autoplay muted loop playsinline preload="metadata" poster="assets/images/Cirket.jpeg" aria-hidden="true">
+        <source src="assets/images/Tournment.mp4" type="video/mp4">
+        <source src="assets/images/IMG_2207.MOV" type="video/quicktime">
       </video>
       <div class="hero-video-overlay" aria-hidden="true"></div>
       <div class="hero-grid-texture" aria-hidden="true"></div>
@@ -941,6 +942,20 @@
         </label>
         <button type="button" class="btn btn-primary" id="advSaveBtn" style="margin-top:8px;">Save Advance
           Details</button>
+      </div>
+    </div>
+  </div>
+  <div class="admin-modal" id="actionConfirmModal" role="dialog" aria-modal="true" aria-labelledby="confirmActionTitle" style="z-index:330;display:none;">
+    <div class="admin-box" style="max-width:440px;">
+      <div class="admin-head">
+        <h3 id="confirmActionTitle" style="font-size:1.35rem;margin:0;">CONFIRM ACTION</h3>
+        <button class="btn btn-ghost btn-sm" id="confirmActionCloseBtn" aria-label="Close dialog">Close</button>
+      </div>
+      <p id="confirmActionMessage" style="font-size:0.88rem;color:var(--muted);margin:12px 0 20px;line-height:1.6;"></p>
+      <div id="confirmActionWarning" style="display:none;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:8px;padding:10px 12px;margin-bottom:16px;font-size:0.80rem;color:#f59e0b;"></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;">
+        <button type="button" class="btn btn-ghost btn-sm" id="confirmActionCancelBtn" style="min-height:44px;padding:10px 18px;">Cancel</button>
+        <button type="button" class="btn btn-primary btn-sm" id="confirmActionProceedBtn" style="min-height:44px;padding:10px 20px;">Proceed</button>
       </div>
     </div>
   </div>

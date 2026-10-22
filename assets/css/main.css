@@ -49,7 +49,7 @@ body {
 .preloader {
   position: fixed;
   inset: 0;
-  width: 100vw;
+  width: 100%;
   height: 100vh;
   height: 100dvh;
   z-index: 999999;
@@ -303,9 +303,14 @@ p  { color: var(--muted); line-height: 1.7; margin: 0; }
   display: none;
   background: none;
   color: var(--white);
-  padding: 8px;
+  padding: 10px;
+  min-width: 44px;
+  min-height: 44px;
   border-radius: var(--radius-sm);
   transition: background 0.2s;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
 }
 .menu-toggle:hover { background: rgba(255,255,255,0.08); }
 .menu-toggle svg { width: 22px; height: 22px; display: block; }
@@ -316,6 +321,11 @@ p  { color: var(--muted); line-height: 1.7; margin: 0; }
   display: flex;
   align-items: center;
   overflow: hidden;
+  background-color: #07090a;
+  background-image: url('../images/Cirket.jpeg');
+  background-position: center center;
+  background-size: cover;
+  background-repeat: no-repeat;
 }
 .hero-video {
   position: absolute;
@@ -1769,44 +1779,74 @@ footer {
   .nav-links a::after { display: none; }
   .hero-video { display: block; }
   .hero::before { display: none; }
-  .hero h1 { font-size: clamp(3rem, 12vw, 5rem); }
+  .hero h1 {
+    font-size: clamp(2.2rem, 10vw, 4.8rem);
+    line-height: 1.05;
+    word-break: break-word;
+  }
   .hero-desc { font-size: 0.96rem; }
-  .hero-actions { gap: 10px; }
-  .hero-actions .btn-primary { padding: 14px 26px; }
-  .hero-stats { gap: 16px; }
+  .hero-actions { gap: 10px; flex-wrap: wrap; }
+  .hero-actions .btn-primary,
+  .hero-actions .btn-ghost {
+    min-height: 46px;
+    padding: 13px 24px;
+  }
+  .hero-stats { gap: 12px; }
   .hero-stat {
     border-right: none;
     margin-right: 0;
     padding-right: 0;
-    flex-basis: calc(50% - 8px);
+    flex-basis: calc(50% - 6px);
   }
   .hero-scroll-hint { display: none; }
-  .hero-carousel { height: 400px; border-radius: var(--radius-lg); }
+  .hero-carousel { height: 380px; border-radius: var(--radius-lg); }
   .carousel-slide-overlay {
-    padding: 20px;
+    padding: 18px;
     flex-direction: column;
     align-items: flex-start;
     gap: 10px;
   }
   .carousel-slide-info { max-width: 100%; }
-  .carousel-title { font-size: 1.5rem; }
-  .carousel-zoom-btn { align-self: flex-start; }
-  .form-card { padding: 24px 20px; }
+  .carousel-title { font-size: 1.35rem; }
+  .carousel-zoom-btn { align-self: flex-start; min-height: 44px; }
+  .form-card { padding: 22px 18px; }
   .form-grid { grid-template-columns: 1fr; }
   .slot-grid { grid-template-columns: repeat(3, minmax(0,1fr)); gap: 6px; }
+  .slot-btn { min-height: 48px; }
   .lightbox { padding: 14px; }
   .lightbox-info { flex-direction: column; align-items: flex-start; gap: 12px; }
   .lightbox-controls { width: 100%; justify-content: space-between; }
   .footer-top { flex-direction: column; align-items: flex-start; }
   .footer-bottom { flex-direction: column; gap: 6px; }
-  .section { padding: 70px 0; }
+  .section { padding: 60px 0; }
   .section-head { gap: 8px; }
 }
 @media (max-width: 480px) {
-  .slot-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
-  .hero-stats { flex-direction: column; gap: 14px; }
+  .container { padding: 0 14px; }
+  .slot-grid { grid-template-columns: repeat(2, minmax(0,1fr)); gap: 6px; }
+  .slot-btn { min-height: 50px; }
+  .hero-stats { flex-direction: column; gap: 12px; }
   .hero-stat { flex-basis: 100%; }
   .event-plan-row { grid-template-columns: 1fr; }
+  .date-shortcuts { flex-wrap: wrap; gap: 6px; }
+  .date-chip { min-height: 44px; }
+  .form-card { padding: 18px 14px; }
+  .form-card input,
+  .form-card select,
+  .form-card textarea {
+    font-size: 16px;
+    min-height: 44px;
+  }
+}
+@media (max-width: 360px) {
+  .container { padding: 0 10px; }
+  .hero h1 { font-size: clamp(1.9rem, 9vw, 2.4rem); }
+  .hero-eyebrow { font-size: 0.74rem; }
+  .hero-live-pill { font-size: 0.72rem; padding: 4px 10px; }
+  .form-card { padding: 16px 10px; }
+  .slot-grid { grid-template-columns: repeat(2, minmax(0,1fr)); gap: 4px; }
+  .slot-btn { min-height: 48px; padding: 6px 3px; font-size: 0.72rem; }
+  .btn-primary, .btn-ghost { padding: 12px 16px; font-size: 0.86rem; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
@@ -1816,4 +1856,5 @@ footer {
     scroll-behavior: auto !important;
   }
   .reveal { opacity: 1; transform: none; }
+  .hero-video { display: none !important; }
 }

@@ -739,6 +739,65 @@
         return `<span class="badge badge-pending">${escapeHtml(st)}</span>`;
     }
   }
+  function showActionConfirmDialog({ title, message, warning, confirmText, isDanger, onConfirm }) {
+    const modal = $('#actionConfirmModal');
+    if (!modal) {
+      if (window.confirm(`${message}${warning ? '\n\n' + warning : ''}`)) {
+        onConfirm();
+      }
+      return;
+    }
+    const titleEl = $('#confirmActionTitle');
+    const msgEl = $('#confirmActionMessage');
+    const warnEl = $('#confirmActionWarning');
+    const proceedBtn = $('#confirmActionProceedBtn');
+    const cancelBtn = $('#confirmActionCancelBtn');
+    const closeBtn = $('#confirmActionCloseBtn');
+
+    if (titleEl) titleEl.textContent = title || 'CONFIRM ACTION';
+    if (msgEl) msgEl.textContent = message || 'Are you sure you want to proceed?';
+    if (warnEl) {
+      if (warning) {
+        warnEl.textContent = warning;
+        warnEl.style.display = 'block';
+      } else {
+        warnEl.style.display = 'none';
+      }
+    }
+    if (proceedBtn) {
+      proceedBtn.textContent = confirmText || 'Proceed';
+      if (isDanger) {
+        proceedBtn.style.background = '#dc2626';
+        proceedBtn.style.borderColor = '#dc2626';
+        proceedBtn.style.color = '#ffffff';
+      } else {
+        proceedBtn.style.background = 'var(--green)';
+        proceedBtn.style.borderColor = 'var(--green)';
+        proceedBtn.style.color = '#07090a';
+      }
+    }
+
+    modal.style.display = 'flex';
+    modal.classList.add('open');
+
+    function closeDialog() {
+      modal.style.display = 'none';
+      modal.classList.remove('open');
+      if (proceedBtn) proceedBtn.onclick = null;
+      if (cancelBtn) cancelBtn.onclick = null;
+      if (closeBtn) closeBtn.onclick = null;
+    }
+
+    if (cancelBtn) cancelBtn.onclick = closeDialog;
+    if (closeBtn) closeBtn.onclick = closeDialog;
+    if (proceedBtn) {
+      proceedBtn.onclick = () => {
+        closeDialog();
+        onConfirm();
+      };
+    }
+  }
+
   function renderLiveBookingsTable(list) {
     const target = $('#bookingTableContainer');
     if (!target) return;
@@ -746,7 +805,61 @@
       target.innerHTML = '<div class="empty-state">No matching booking records found.</div>';
       return;
     }
+
+    const items = list.map((b) => {
+      const id = b.id;
+      const ref = b.reference || b.id;
+      const createdAt = (b.created_at || b.createdAt || '').slice(0, 16).replace('T', ' ');
+      const name = b.customer_name || b.name || '';
+      const phone = b.customer_phone || b.phone || '';
+      const cleanPhone = phone.replace(/[^0-9]/g, '');
+      const type = b.booking_type || b.type || '';
+      const date = b.booking_date || b.date || '';
+      const isEvent = type && type.toLowerCase() !== 'cricket' && type.toLowerCase() !== 'cricket booking';
+      let time = '';
+      if (isEvent) {
+        let ev = {};
+        try {
+          ev = typeof b.event_details === 'string' ? JSON.parse(b.event_details) : (b.event_details || {});
+        } catch (_) {}
+        const evStart = ev.start_time || '';
+        const evDur = ev.duration || (b.duration_hours ? `${b.duration_hours} hrs` : 'Event');
+        if (!evStart || evStart === '00:00:00' || evStart === 'Flexible') {
+          time = `Private Event (${evDur})`;
+        } else {
+          const m = evStart.match(/^(\d{1,2}):/);
+          const startFmt = m ? formatHour(parseInt(m[1], 10)) : evStart;
+          time = `${startFmt} (${evDur})`;
+        }
+      } else {
+        const rawTime = b.booked_slots || b.slots || b.start_time || b.time || '';
+        time = String(rawTime).split(',')
+          .map(t => {
+            const tr = t.trim();
+            const m = tr.match(/^(\d{1,2}):/);
+            if (m) return formatHour(parseInt(m[1], 10));
+            return tr;
+          })
+          .join(', ');
+      }
+      const price = b.total_price || b.price;
+      const curStatus = (b.status || 'pending_confirmation').toLowerCase();
+      const isVerified = Boolean(b.payment_verified);
+      const advAmt = b.advance_amount;
+      const advMethod = b.payment_method || 'UPI';
+      const advRef = b.payment_reference || '';
+      const holdExp = b.hold_expires_at ? b.hold_expires_at.slice(11, 16) : null;
+      const waUrl = `https://wa.me/${cleanPhone}?text=Hi%20${encodeURIComponent(name)}!%20This%20is%20PowerPlay%20Club%20regarding%20booking%20${encodeURIComponent(ref)}.`;
+
+      return {
+        id, ref, createdAt, name, phone, cleanPhone, type, date, time,
+        price, curStatus, isVerified, advAmt, advMethod, advRef, holdExp, waUrl,
+        raw: b
+      };
+    });
+
     target.innerHTML = `
+      <!-- Desktop Table View -->
       <div class="admin-table-wrap">
         <table class="admin-table">
           <thead>
@@ -760,155 +873,228 @@
             </tr>
           </thead>
           <tbody>
-            ${list.map((b) => {
-              const id = b.id;
-              const ref = b.reference || b.id;
-              const createdAt = (b.created_at || b.createdAt || '').slice(0, 16).replace('T', ' ');
-              const name = b.customer_name || b.name || '';
-              const phone = b.customer_phone || b.phone || '';
-              const type = b.booking_type || b.type || '';
-              const date = b.booking_date || b.date || '';
-              const isEvent = type && type.toLowerCase() !== 'cricket' && type.toLowerCase() !== 'cricket booking';
-              let time = '';
-              if (isEvent) {
-                let ev = {};
-                try {
-                  ev = typeof b.event_details === 'string' ? JSON.parse(b.event_details) : (b.event_details || {});
-                } catch (_) {}
-                const evStart = ev.start_time || '';
-                const evDur = ev.duration || (b.duration_hours ? `${b.duration_hours} hrs` : 'Event');
-                if (!evStart || evStart === '00:00:00' || evStart === 'Flexible') {
-                  time = `Private Event (${evDur})`;
-                } else {
-                  const m = evStart.match(/^(\d{1,2}):/);
-                  const startFmt = m ? formatHour(parseInt(m[1], 10)) : evStart;
-                  time = `${startFmt} (${evDur})`;
-                }
-              } else {
-                const rawTime = b.booked_slots || b.slots || b.start_time || b.time || '';
-                time = String(rawTime).split(',')
-                  .map(t => {
-                    const tr = t.trim();
-                    const m = tr.match(/^(\d{1,2}):/);
-                    if (m) return formatHour(parseInt(m[1], 10));
-                    return tr;
-                  })
-                  .join(', ');
-              }
-              const price = b.total_price || b.price;
-              const curStatus = (b.status || 'pending_confirmation').toLowerCase();
-              const isVerified = Boolean(b.payment_verified);
-              const advAmt = b.advance_amount;
-              const advMethod = b.payment_method || 'UPI';
-              const advRef = b.payment_reference || '';
-              const holdExp = b.hold_expires_at ? b.hold_expires_at.slice(11, 16) : null;
-              return `
-                <tr>
-                  <td data-label="Ref / Status">
-                    <b>${escapeHtml(ref)}</b>
-                    <br><small style="color:var(--muted);">${escapeHtml(createdAt)}</small>
-                    <div style="margin-top:6px;">${getStatusBadge(curStatus, holdExp)}</div>
-                  </td>
-                  <td data-label="Customer">
-                    <b>${escapeHtml(name)}</b>
-                    <br><small style="color:var(--muted);">${escapeHtml(phone)}</small>
-                  </td>
-                  <td data-label="Booking / Slots">
-                    <b>${escapeHtml(date)}</b>
-                    <br><small style="color:var(--green);font-weight:600;">${escapeHtml(time)}</small>
-                    <div style="opacity:0.8;font-size:0.75rem;margin-top:2px;">${escapeHtml(type)} · ${escapeHtml(b.player_count || b.guests || 'Squad')}</div>
-                  </td>
-                  <td data-label="Price / Advance">
-                    <div><b>Rate: ${price ? '₹' + Number(price).toLocaleString('en-IN') : 'Quote'}</b></div>
-                    ${advAmt ? `
-                      <div style="font-size:0.78rem;margin-top:4px;">
-                        Adv: <b>₹${Number(advAmt).toLocaleString('en-IN')}</b> (${escapeHtml(advMethod)})<br>
-                        <small style="color:var(--muted);">Ref: ${escapeHtml(advRef || 'N/A')}</small>
-                        <br>${isVerified ? '<span class="badge-verified">✓ Verified</span>' : '<span class="badge-unverified">Unverified</span>'}
+            ${items.map((b) => `
+              <tr>
+                <td data-label="Ref / Status">
+                  <b>${escapeHtml(b.ref)}</b>
+                  <br><small style="color:var(--muted);">${escapeHtml(b.createdAt)}</small>
+                  <div style="margin-top:6px;">${getStatusBadge(b.curStatus, b.holdExp)}</div>
+                </td>
+                <td data-label="Customer">
+                  <b>${escapeHtml(b.name)}</b>
+                  <br><small style="color:var(--muted);">${escapeHtml(b.phone)}</small>
+                </td>
+                <td data-label="Booking / Slots">
+                  <b>${escapeHtml(b.date)}</b>
+                  <br><small style="color:var(--green);font-weight:600;">${escapeHtml(b.time)}</small>
+                  <div style="opacity:0.8;font-size:0.75rem;margin-top:2px;">${escapeHtml(b.type)} · ${escapeHtml(b.raw.player_count || b.raw.guests || 'Squad')}</div>
+                </td>
+                <td data-label="Price / Advance">
+                  <div><b>Rate: ${b.price ? '₹' + Number(b.price).toLocaleString('en-IN') : 'Quote'}</b></div>
+                  ${b.advAmt ? `
+                    <div style="font-size:0.78rem;margin-top:4px;">
+                      Adv: <b>₹${Number(b.advAmt).toLocaleString('en-IN')}</b> (${escapeHtml(b.advMethod)})<br>
+                      <small style="color:var(--muted);">Ref: ${escapeHtml(b.advRef || 'N/A')}</small>
+                      <br>${b.isVerified ? '<span class="badge-verified">✓ Verified</span>' : '<span class="badge-unverified">Unverified</span>'}
+                    </div>
+                  ` : '<div style="font-size:0.75rem;color:var(--muted);margin-top:4px;">No advance recorded</div>'}
+                  <button type="button" class="btn btn-xs btn-ghost btn-adv-modal"
+                    data-id="${escapeHtml(b.id)}"
+                    data-ref="${escapeHtml(b.ref)}"
+                    data-amt="${b.advAmt ?? ''}"
+                    data-method="${escapeHtml(b.advMethod)}"
+                    data-txref="${escapeHtml(b.advRef)}"
+                    data-verified="${b.isVerified ? '1' : '0'}"
+                    style="margin-top:6px;">
+                    ${b.advAmt ? 'Edit Advance' : '+ Record Advance'}
+                  </button>
+                </td>
+                <td data-label="Change Status">
+                  <select class="status-select" data-booking-id="${escapeHtml(b.id)}">
+                    <option value="pending_confirmation" ${b.curStatus === 'pending_confirmation' || b.curStatus === 'pending' || b.curStatus === 'new' ? 'selected' : ''}>Pending Confirmation</option>
+                    <option value="awaiting_advance" ${b.curStatus === 'awaiting_advance' ? 'selected' : ''}>Awaiting Advance</option>
+                    <option value="payment_received" ${b.curStatus === 'payment_received' ? 'selected' : ''}>Payment Received</option>
+                    <option value="confirmed" ${b.curStatus === 'confirmed' ? 'selected' : ''}>Confirmed</option>
+                    <option value="cancelled" ${b.curStatus === 'cancelled' ? 'selected' : ''}>Cancelled</option>
+                    <option value="rejected" ${b.curStatus === 'rejected' ? 'selected' : ''}>Rejected</option>
+                  </select>
+                </td>
+                <td data-label="Actions">
+                  <div style="display:flex;flex-direction:column;gap:6px;">
+                    ${b.curStatus !== 'confirmed' && b.curStatus !== 'cancelled' && b.curStatus !== 'rejected' ? `
+                      <div style="display:flex;gap:4px;flex-wrap:wrap;">
+                        <button type="button" class="btn btn-xs btn-primary btn-confirm-action"
+                          data-id="${escapeHtml(b.id)}"
+                          data-ref="${escapeHtml(b.ref)}"
+                          data-name="${escapeHtml(b.name)}"
+                          data-verified="${b.isVerified ? '1' : '0'}">
+                          ✓ Confirm Booking
+                        </button>
+                        <button type="button" class="btn btn-xs btn-ghost btn-hold-action"
+                          data-id="${escapeHtml(b.id)}"
+                          data-ref="${escapeHtml(b.ref)}"
+                          data-name="${escapeHtml(b.name)}">
+                          Hold 15m
+                        </button>
                       </div>
-                    ` : '<div style="font-size:0.75rem;color:var(--muted);margin-top:4px;">No advance recorded</div>'}
-                    <button type="button" class="btn btn-xs btn-ghost btn-adv-modal"
-                      data-id="${escapeHtml(id)}"
-                      data-ref="${escapeHtml(ref)}"
-                      data-amt="${advAmt ?? ''}"
-                      data-method="${escapeHtml(advMethod)}"
-                      data-txref="${escapeHtml(advRef)}"
-                      data-verified="${isVerified ? '1' : '0'}"
-                      style="margin-top:6px;">
-                      ${advAmt ? 'Edit Advance' : '+ Record Advance'}
-                    </button>
-                  </td>
-                  <td data-label="Change Status">
-                    <select class="status-select" data-booking-id="${escapeHtml(id)}">
-                      <option value="pending_confirmation" ${curStatus === 'pending_confirmation' || curStatus === 'pending' || curStatus === 'new' ? 'selected' : ''}>Pending Confirmation</option>
-                      <option value="awaiting_advance" ${curStatus === 'awaiting_advance' ? 'selected' : ''}>Awaiting Advance</option>
-                      <option value="payment_received" ${curStatus === 'payment_received' ? 'selected' : ''}>Payment Received</option>
-                      <option value="confirmed" ${curStatus === 'confirmed' ? 'selected' : ''}>Confirmed</option>
-                      <option value="cancelled" ${curStatus === 'cancelled' ? 'selected' : ''}>Cancelled</option>
-                      <option value="rejected" ${curStatus === 'rejected' ? 'selected' : ''}>Rejected</option>
-                    </select>
-                  </td>
-                  <td data-label="Actions">
-                    <div style="display:flex;flex-direction:column;gap:6px;">
-                      ${curStatus !== 'confirmed' && curStatus !== 'cancelled' && curStatus !== 'rejected' ? `
-                        <div style="display:flex;gap:4px;flex-wrap:wrap;">
-                          <button type="button" class="btn btn-xs btn-primary btn-confirm-action"
-                            data-id="${escapeHtml(id)}"
-                            data-ref="${escapeHtml(ref)}"
-                            data-verified="${isVerified ? '1' : '0'}">
-                            ✓ Confirm Booking
-                          </button>
-                          <button type="button" class="btn btn-xs btn-ghost btn-hold-action"
-                            data-id="${escapeHtml(id)}"
-                            data-ref="${escapeHtml(ref)}">
-                            Hold 15m
-                          </button>
-                        </div>
-                        <div style="display:flex;gap:4px;flex-wrap:wrap;">
-                          <button type="button" class="btn btn-xs btn-ghost btn-reject-action"
-                            data-id="${escapeHtml(id)}"
-                            data-ref="${escapeHtml(ref)}"
-                            style="color:var(--red);">
-                            Reject
-                          </button>
-                          <a class="btn btn-xs btn-ghost"
-                            href="https:
-                            target="_blank" rel="noopener">
-                            WhatsApp
-                          </a>
-                        </div>
-                      ` : curStatus === 'confirmed' ? `
-                        <div style="display:flex;gap:4px;flex-wrap:wrap;">
-                          <button type="button" class="btn btn-xs btn-ghost btn-cancel-action"
-                            data-id="${escapeHtml(id)}"
-                            data-ref="${escapeHtml(ref)}"
-                            style="color:var(--red);">
-                            Cancel Booking
-                          </button>
-                          <a class="btn btn-xs btn-ghost"
-                            href="https://wa.me/${phone.replace(/[^0-9]/g, '')}?text=Hi%20${encodeURIComponent(name)}!%20This%20is%20PowerPlay%20Club%20regarding%20booking%20${encodeURIComponent(ref)}."
-                            target="_blank" rel="noopener">
-                            WhatsApp
-                          </a>
-                        </div>
-                      ` : `
-                        <a class="btn btn-xs btn-ghost"
-                          href="https://wa.me/${phone.replace(/[^0-9]/g, '')}?text=Hi%20${encodeURIComponent(name)}!%20This%20is%20PowerPlay%20Club%20regarding%20booking%20${encodeURIComponent(ref)}."
-                          target="_blank" rel="noopener">
+                      <div style="display:flex;gap:4px;flex-wrap:wrap;">
+                        <button type="button" class="btn btn-xs btn-ghost btn-reject-action"
+                          data-id="${escapeHtml(b.id)}"
+                          data-ref="${escapeHtml(b.ref)}"
+                          data-name="${escapeHtml(b.name)}"
+                          style="color:var(--red);">
+                          Reject
+                        </button>
+                        <a class="btn btn-xs btn-ghost" href="${escapeHtml(b.waUrl)}" target="_blank" rel="noopener">
                           WhatsApp
                         </a>
-                      `}
-                    </div>
-                  </td>
-                </tr>
-              `;
-            }).join('')}
+                      </div>
+                    ` : b.curStatus === 'confirmed' ? `
+                      <div style="display:flex;gap:4px;flex-wrap:wrap;">
+                        <button type="button" class="btn btn-xs btn-ghost btn-cancel-action"
+                          data-id="${escapeHtml(b.id)}"
+                          data-ref="${escapeHtml(b.ref)}"
+                          data-name="${escapeHtml(b.name)}"
+                          style="color:var(--red);">
+                          Cancel Booking
+                        </button>
+                        <a class="btn btn-xs btn-ghost" href="${escapeHtml(b.waUrl)}" target="_blank" rel="noopener">
+                          WhatsApp
+                        </a>
+                      </div>
+                    ` : `
+                      <a class="btn btn-xs btn-ghost" href="${escapeHtml(b.waUrl)}" target="_blank" rel="noopener">
+                        WhatsApp
+                      </a>
+                    `}
+                  </div>
+                </td>
+              </tr>
+            `).join('')}
           </tbody>
         </table>
       </div>
+
+      <!-- Mobile & Tablet Responsive Booking Cards View -->
+      <div class="admin-booking-cards">
+        ${items.map((b) => `
+          <div class="admin-card">
+            <div class="admin-card-head">
+              <div>
+                <span class="admin-card-ref">#${escapeHtml(b.ref)}</span>
+                <span class="admin-card-date">${escapeHtml(b.createdAt)}</span>
+              </div>
+              <div>${getStatusBadge(b.curStatus, b.holdExp)}</div>
+            </div>
+
+            <div class="admin-card-customer">
+              <div class="admin-card-cust-info">
+                <span class="admin-card-cust-name">${escapeHtml(b.name)}</span>
+                <span class="admin-card-cust-phone">${escapeHtml(b.phone)}</span>
+              </div>
+              <div class="admin-card-cust-actions">
+                ${b.cleanPhone ? `
+                  <a class="btn btn-ghost" href="tel:${escapeHtml(b.cleanPhone)}" title="Call customer" aria-label="Call customer">
+                    📞 Call
+                  </a>
+                  <a class="btn btn-ghost" href="${escapeHtml(b.waUrl)}" target="_blank" rel="noopener" title="WhatsApp" aria-label="WhatsApp customer">
+                    💬 Chat
+                  </a>
+                ` : ''}
+              </div>
+            </div>
+
+            <div class="admin-card-grid">
+              <div class="admin-card-grid-item">
+                <span class="admin-card-label">Date &amp; Slots</span>
+                <span class="admin-card-value">${escapeHtml(b.date)}<br><small style="color:var(--green);">${escapeHtml(b.time)}</small></span>
+              </div>
+              <div class="admin-card-grid-item">
+                <span class="admin-card-label">Type &amp; Squad</span>
+                <span class="admin-card-value">${escapeHtml(b.type)}<br><small style="color:var(--muted);">${escapeHtml(b.raw.player_count || b.raw.guests || 'Squad')}</small></span>
+              </div>
+              <div class="admin-card-grid-item">
+                <span class="admin-card-label">Total Rate</span>
+                <span class="admin-card-value" style="color:var(--green);font-size:0.95rem;">${b.price ? '₹' + Number(b.price).toLocaleString('en-IN') : 'Quote'}</span>
+              </div>
+              <div class="admin-card-grid-item">
+                <span class="admin-card-label">Advance Payment</span>
+                <span class="admin-card-value">
+                  ${b.advAmt ? `₹${Number(b.advAmt).toLocaleString('en-IN')} (${escapeHtml(b.advMethod)})` : 'None'}
+                  <br>${b.advAmt ? (b.isVerified ? '<span class="badge-verified">✓ Verified</span>' : '<span class="badge-unverified">Unverified</span>') : ''}
+                </span>
+              </div>
+            </div>
+
+            <div class="admin-card-status-row">
+              <label for="status_${escapeHtml(b.id)}">Status:</label>
+              <select id="status_${escapeHtml(b.id)}" class="status-select" data-booking-id="${escapeHtml(b.id)}">
+                <option value="pending_confirmation" ${b.curStatus === 'pending_confirmation' || b.curStatus === 'pending' || b.curStatus === 'new' ? 'selected' : ''}>Pending Confirmation</option>
+                <option value="awaiting_advance" ${b.curStatus === 'awaiting_advance' ? 'selected' : ''}>Awaiting Advance</option>
+                <option value="payment_received" ${b.curStatus === 'payment_received' ? 'selected' : ''}>Payment Received</option>
+                <option value="confirmed" ${b.curStatus === 'confirmed' ? 'selected' : ''}>Confirmed</option>
+                <option value="cancelled" ${b.curStatus === 'cancelled' ? 'selected' : ''}>Cancelled</option>
+                <option value="rejected" ${b.curStatus === 'rejected' ? 'selected' : ''}>Rejected</option>
+              </select>
+            </div>
+
+            <div class="admin-card-actions">
+              <div class="admin-card-actions-row">
+                <button type="button" class="btn btn-ghost btn-adv-modal"
+                  data-id="${escapeHtml(b.id)}"
+                  data-ref="${escapeHtml(b.ref)}"
+                  data-amt="${b.advAmt ?? ''}"
+                  data-method="${escapeHtml(b.advMethod)}"
+                  data-txref="${escapeHtml(b.advRef)}"
+                  data-verified="${b.isVerified ? '1' : '0'}">
+                  ${b.advAmt ? '✏️ Edit Advance' : '➕ Record Advance'}
+                </button>
+                ${b.curStatus !== 'confirmed' && b.curStatus !== 'cancelled' && b.curStatus !== 'rejected' ? `
+                  <button type="button" class="btn btn-ghost btn-hold-action"
+                    data-id="${escapeHtml(b.id)}"
+                    data-ref="${escapeHtml(b.ref)}"
+                    data-name="${escapeHtml(b.name)}">
+                    ⏱️ Hold 15m
+                  </button>
+                ` : ''}
+              </div>
+
+              ${b.curStatus !== 'confirmed' && b.curStatus !== 'cancelled' && b.curStatus !== 'rejected' ? `
+                <div class="admin-card-actions-row">
+                  <button type="button" class="btn btn-primary btn-confirm-action"
+                    data-id="${escapeHtml(b.id)}"
+                    data-ref="${escapeHtml(b.ref)}"
+                    data-name="${escapeHtml(b.name)}"
+                    data-verified="${b.isVerified ? '1' : '0'}">
+                    ✓ Confirm Booking
+                  </button>
+                  <button type="button" class="btn btn-ghost btn-reject-action"
+                    data-id="${escapeHtml(b.id)}"
+                    data-ref="${escapeHtml(b.ref)}"
+                    data-name="${escapeHtml(b.name)}"
+                    style="color:var(--red);border-color:rgba(220,38,38,0.3);">
+                    ✕ Reject
+                  </button>
+                </div>
+              ` : b.curStatus === 'confirmed' ? `
+                <div class="admin-card-actions-row">
+                  <button type="button" class="btn btn-ghost btn-cancel-action"
+                    data-id="${escapeHtml(b.id)}"
+                    data-ref="${escapeHtml(b.ref)}"
+                    data-name="${escapeHtml(b.name)}"
+                    style="color:var(--red);border-color:rgba(220,38,38,0.3);">
+                    Cancel Booking
+                  </button>
+                </div>
+              ` : ''}
+            </div>
+          </div>
+        `).join('')}
+      </div>
     `;
-    // Hook status dropdown change
-    target.querySelectorAll('[data-booking-id]').forEach((select) => {
+
+    // Hook status dropdown change on both views
+    target.querySelectorAll('.status-select').forEach((select) => {
       select.addEventListener('change', async () => {
         const bookingId = select.dataset.bookingId;
         const newStatus = select.value;
@@ -923,7 +1109,7 @@
             body: JSON.stringify({ status: newStatus })
           });
           if (res.ok) {
-            showToast(`Status updated to ${newStatus}. Slot released if cancelled/rejected.`);
+            showToast(`Status updated to ${newStatus}.`);
             fetchAdminBookings();
             renderSlots();
           } else {
@@ -935,128 +1121,167 @@
         }
       });
     });
-    // Hook Hold action
+
+    // Hook Hold action on both views
     target.querySelectorAll('.btn-hold-action').forEach((btn) => {
-      btn.addEventListener('click', async () => {
+      btn.addEventListener('click', () => {
         const bookingId = btn.dataset.id;
         const ref = btn.dataset.ref;
+        const name = btn.dataset.name || 'customer';
         const token = sessionStorage.getItem(STAFF_TOKEN_KEY);
-        try {
-          const res = await fetch(`${API_BASE}/api/admin/bookings/${bookingId}/hold`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ hold_duration_minutes: 15 })
-          });
-          if (res.ok) {
-            showToast(`Temporary hold placed for 15 minutes on ${ref}.`);
-            fetchAdminBookings();
-            renderSlots();
-          } else {
-            const err = await res.json().catch(() => ({}));
-            showToast(err.detail || 'Failed to place hold.');
+
+        showActionConfirmDialog({
+          title: 'PLACE 15-MINUTE HOLD',
+          message: `Place a 15-minute temporary hold for booking ${ref} (${name})?`,
+          warning: 'This will temporarily block slot availability for other users while awaiting payment.',
+          confirmText: 'Place Hold',
+          isDanger: false,
+          onConfirm: async () => {
+            try {
+              const res = await fetch(`${API_BASE}/api/admin/bookings/${bookingId}/hold`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ hold_duration_minutes: 15 })
+              });
+              if (res.ok) {
+                showToast(`Temporary hold placed for 15 minutes on ${ref}.`);
+                fetchAdminBookings();
+                renderSlots();
+              } else {
+                const err = await res.json().catch(() => ({}));
+                showToast(err.detail || 'Failed to place hold.');
+              }
+            } catch (_) {
+              showToast('Failed to connect to server.');
+            }
           }
-        } catch (_) {
-          showToast('Failed to connect to server.');
-        }
+        });
       });
     });
-    // Hook Confirm action
+
+    // Hook Confirm action on both views
     target.querySelectorAll('.btn-confirm-action').forEach((btn) => {
-      btn.addEventListener('click', async () => {
+      btn.addEventListener('click', () => {
         const bookingId = btn.dataset.id;
         const ref = btn.dataset.ref;
+        const name = btn.dataset.name || 'customer';
         const isVerified = btn.dataset.verified === '1';
         const token = sessionStorage.getItem(STAFF_TOKEN_KEY);
-        let warnMsg = '';
-        if (!isVerified) {
-          warnMsg = 'Notice: Advance payment has not been marked as verified yet.\n\n';
-        }
-        const confirmed = window.confirm(
-          `${warnMsg}Are you sure you want to CONFIRM booking ${ref}?\n\nThis will atomically reserve the time slot and mark the booking as Confirmed. Competing requests for this slot will be rejected.`
-        );
-        if (!confirmed) return;
-        try {
-          const res = await fetch(`${API_BASE}/api/admin/bookings/${bookingId}/confirm`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ notes: 'Confirmed by owner after advance verification' })
-          });
-          if (res.ok) {
-            showToast(`Booking ${ref} CONFIRMED! Slot is now permanently locked.`);
-            fetchAdminBookings();
-            renderSlots();
-          } else {
-            const err = await res.json().catch(() => ({}));
-            showToast(err.detail || 'Failed to confirm booking.');
+
+        showActionConfirmDialog({
+          title: 'CONFIRM BOOKING',
+          message: `Are you sure you want to CONFIRM booking ${ref} (${name})?`,
+          warning: isVerified ? 'Slot will be permanently reserved and closed to other customers.' : 'Warning: Advance payment has NOT been marked as verified yet. Confirming will permanently lock this slot.',
+          confirmText: '✓ Confirm & Lock Slot',
+          isDanger: false,
+          onConfirm: async () => {
+            try {
+              const res = await fetch(`${API_BASE}/api/admin/bookings/${bookingId}/confirm`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ notes: 'Confirmed by owner after advance verification' })
+              });
+              if (res.ok) {
+                showToast(`Booking ${ref} CONFIRMED! Slot is now permanently locked.`);
+                fetchAdminBookings();
+                renderSlots();
+              } else {
+                const err = await res.json().catch(() => ({}));
+                showToast(err.detail || 'Failed to confirm booking.');
+              }
+            } catch (_) {
+              showToast('Failed to connect to server.');
+            }
           }
-        } catch (_) {
-          showToast('Failed to connect to server.');
-        }
+        });
       });
     });
-    // Hook Reject action
+
+    // Hook Reject action on both views
     target.querySelectorAll('.btn-reject-action').forEach((btn) => {
-      btn.addEventListener('click', async () => {
+      btn.addEventListener('click', () => {
         const bookingId = btn.dataset.id;
         const ref = btn.dataset.ref;
+        const name = btn.dataset.name || 'customer';
         const token = sessionStorage.getItem(STAFF_TOKEN_KEY);
-        if (!window.confirm(`Reject booking request ${ref}?`)) return;
-        try {
-          const res = await fetch(`${API_BASE}/api/admin/bookings/${bookingId}/status`, {
-            method: 'PATCH',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ status: 'rejected' })
-          });
-          if (res.ok) {
-            showToast(`Booking ${ref} rejected. Slot remains available.`);
-            fetchAdminBookings();
-            renderSlots();
-          } else {
-            showToast('Failed to reject booking on server.');
+
+        showActionConfirmDialog({
+          title: 'REJECT BOOKING REQUEST',
+          message: `Reject booking request ${ref} from ${name}?`,
+          warning: 'This releases any hold on the slot and marks the request as Rejected.',
+          confirmText: 'Reject Request',
+          isDanger: true,
+          onConfirm: async () => {
+            try {
+              const res = await fetch(`${API_BASE}/api/admin/bookings/${bookingId}/status`, {
+                method: 'PATCH',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ status: 'rejected' })
+              });
+              if (res.ok) {
+                showToast(`Booking ${ref} rejected. Slot remains available.`);
+                fetchAdminBookings();
+                renderSlots();
+              } else {
+                showToast('Failed to reject booking on server.');
+              }
+            } catch (_) {
+              showToast('Failed to connect to server.');
+            }
           }
-        } catch (_) {
-          showToast('Failed to connect to server.');
-        }
+        });
       });
     });
-    // Hook Cancel action
+
+    // Hook Cancel action on both views
     target.querySelectorAll('.btn-cancel-action').forEach((btn) => {
-      btn.addEventListener('click', async () => {
+      btn.addEventListener('click', () => {
         const bookingId = btn.dataset.id;
         const ref = btn.dataset.ref;
+        const name = btn.dataset.name || 'customer';
         const token = sessionStorage.getItem(STAFF_TOKEN_KEY);
-        if (!window.confirm(`Cancel confirmed booking ${ref}? This will release the time slot back to public availability.`)) return;
-        try {
-          const res = await fetch(`${API_BASE}/api/admin/bookings/${bookingId}/status`, {
-            method: 'PATCH',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ status: 'cancelled' })
-          });
-          if (res.ok) {
-            showToast(`Booking ${ref} cancelled and slot released.`);
-            fetchAdminBookings();
-            renderSlots();
-          } else {
-            showToast('Failed to cancel booking on server.');
+
+        showActionConfirmDialog({
+          title: 'CANCEL CONFIRMED BOOKING',
+          message: `Cancel confirmed booking ${ref} (${name})?`,
+          warning: 'This will permanently release the locked slot back to public availability for all customers.',
+          confirmText: 'Cancel Booking',
+          isDanger: true,
+          onConfirm: async () => {
+            try {
+              const res = await fetch(`${API_BASE}/api/admin/bookings/${bookingId}/status`, {
+                method: 'PATCH',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ status: 'cancelled' })
+              });
+              if (res.ok) {
+                showToast(`Booking ${ref} cancelled and slot released.`);
+                fetchAdminBookings();
+                renderSlots();
+              } else {
+                showToast('Failed to cancel booking on server.');
+              }
+            } catch (_) {
+              showToast('Failed to connect to server.');
+            }
           }
-        } catch (_) {
-          showToast('Failed to connect to server.');
-        }
+        });
       });
     });
-    // Hook Open Advance Modal
+
+    // Hook Open Advance Modal on both views
     target.querySelectorAll('.btn-adv-modal').forEach((btn) => {
       btn.addEventListener('click', () => {
         const advModal = $('#advancePaymentModal');
@@ -1923,27 +2148,25 @@
   (function initHeroVideo() {
     const heroVideo = document.querySelector('.hero-video');
     if (!heroVideo) return;
-    // On all devices: let the browser buffer as needed.
-    // "metadata" is enough to get dimensions; the browser will decide how
-    // much to preload based on its own heuristics (saves mobile bandwidth).
+    const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReducedMotion) {
+      try { heroVideo.pause(); } catch (_) {}
+      return;
+    }
     heroVideo.setAttribute('preload', 'metadata');
-    // If the video is already buffered enough, play immediately.
     function attemptPlay() {
-      heroVideo.play().catch(() => {
-        // Autoplay blocked (rare with muted+playsinline).
-        // The poster image set on the <video> element is shown automatically.
-      });
+      heroVideo.play().catch(() => {});
     }
     if (heroVideo.readyState >= 2) {
-      // Enough data already loaded (can happen on fast connections / cache).
       attemptPlay();
     } else {
       heroVideo.addEventListener('loadeddata', attemptPlay, { once: true });
     }
-    // If the video file itself fails to load, hide the element so the
-    // CSS background-color of .hero shows instead of a broken frame.
+    // Handle error gracefully without hiding the poster image
     heroVideo.addEventListener('error', () => {
-      heroVideo.style.display = 'none';
+      if (!heroVideo.getAttribute('poster')) {
+        heroVideo.style.display = 'none';
+      }
     }, { once: true });
   }());
   /* ====================================================
