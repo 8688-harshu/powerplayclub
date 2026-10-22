@@ -83,7 +83,7 @@ def test_hero_video_configuration_and_fallbacks():
     assert 'preload="metadata"' in html
 
     # MP4 source is listed
-    assert '<source src="assets/images/Tournment.mp4" type="video/mp4">' in html
+    assert '<source src="assets/images/hero-video.mp4" type="video/mp4">' in html
 
     # Verify CSS hero fallback
     with open("assets/css/main.css", "r", encoding="utf-8") as f:
