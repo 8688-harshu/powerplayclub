@@ -55,16 +55,36 @@
   const menuToggle = $('#menuToggle');
   const navLinks = $('#navLinks');
   if (menuToggle && navLinks) {
-    menuToggle.addEventListener('click', () => {
-      navLinks.classList.toggle('open');
-      menuToggle.setAttribute('aria-expanded', navLinks.classList.contains('open'));
+    const closeMobileNav = () => {
+      navLinks.classList.remove('open');
+      menuToggle.setAttribute('aria-expanded', 'false');
+    };
+    menuToggle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const willOpen = !navLinks.classList.contains('open');
+      navLinks.classList.toggle('open', willOpen);
+      menuToggle.setAttribute('aria-expanded', String(willOpen));
     });
     $$('#navLinks a').forEach((a) =>
       a.addEventListener('click', () => {
-        navLinks.classList.remove('open');
-        menuToggle.setAttribute('aria-expanded', 'false');
+        closeMobileNav();
       })
     );
+    document.addEventListener('click', (e) => {
+      if (
+        navLinks.classList.contains('open') &&
+        !navLinks.contains(e.target) &&
+        !menuToggle.contains(e.target)
+      ) {
+        closeMobileNav();
+      }
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && navLinks.classList.contains('open')) {
+        closeMobileNav();
+        menuToggle.focus();
+      }
+    });
   }
   $$('[data-type]').forEach((el) => {
     el.addEventListener('click', () => {

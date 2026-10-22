@@ -266,3 +266,44 @@ def test_security_authorization_enforced():
         "slot_date": "2026-11-01",
         "slot_times": ["10:00"]
     }).status_code == 401
+
+
+def test_mobile_navigation_menu_contracts():
+    """Validates the modern floating mobile menu structure, CSS contracts, and JS dismissals."""
+    with open("index.html", "r", encoding="utf-8") as f:
+        html = f.read()
+
+    # Mobile toggle structure
+    assert 'class="menu-toggle" id="menuToggle"' in html
+    assert 'aria-label="Toggle navigation"' in html
+    assert 'aria-expanded="false"' in html
+    assert 'class="menu-toggle-bars"' in html
+    assert 'class="menu-bar bar-1"' in html
+    assert 'class="menu-bar bar-2"' in html
+
+    # Navigation items preserved
+    assert '<a href="#home">Home</a>' in html
+    assert '<a href="#gallery">Gallery</a>' in html
+    assert '<a href="#booking">Book Slot</a>' in html
+    assert '<a href="#contact">Contact</a>' in html
+
+    with open("assets/css/main.css", "r", encoding="utf-8") as f:
+        css = f.read()
+
+    # Floating navigation panel CSS contracts
+    assert ".menu-toggle-bars" in css
+    assert ".menu-bar.bar-1" in css
+    assert ".menu-bar.bar-2" in css
+    assert "position: fixed;" in css
+    assert "backdrop-filter: blur(28px)" in css
+    assert "border-radius: 20px;" in css
+    assert ".nav-links.open" in css
+
+    with open("assets/js/main.js", "r", encoding="utf-8") as f:
+        js = f.read()
+
+    # JS interactions: outside-click and escape key
+    assert "closeMobileNav" in js
+    assert "e.key === 'Escape'" in js
+    assert "!navLinks.contains(e.target)" in js
+
