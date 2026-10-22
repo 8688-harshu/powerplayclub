@@ -18,7 +18,18 @@ import re
 from datetime import datetime, timezone, timedelta, date
 from typing import Dict, Any, List, Optional, Tuple
 
-DB_PATH = os.environ.get("POWERPLAY_DB_PATH", "powerplay.db")
+if os.environ.get("VERCEL"):
+    _default_db = "/tmp/powerplay.db"
+    if not os.path.exists(_default_db) and os.path.exists("powerplay.db"):
+        import shutil
+        try:
+            shutil.copy("powerplay.db", _default_db)
+        except Exception:
+            pass
+    DB_PATH = os.environ.get("POWERPLAY_DB_PATH", _default_db)
+else:
+    DB_PATH = os.environ.get("POWERPLAY_DB_PATH", "powerplay.db")
+
 DEFAULT_HOLD_MINUTES = int(os.environ.get("DEFAULT_HOLD_MINUTES", "15"))
 
 def parse_duration_to_hours(duration_str: str) -> int:
