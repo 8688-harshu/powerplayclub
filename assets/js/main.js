@@ -86,6 +86,14 @@
       }
     });
   }
+  const mainNav = $('#mainNav');
+  if (mainNav) {
+    const handleNavScroll = () => {
+      mainNav.classList.toggle('scrolled', window.scrollY > 20);
+    };
+    window.addEventListener('scroll', handleNavScroll, { passive: true });
+    handleNavScroll();
+  }
   $$('[data-type]').forEach((el) => {
     el.addEventListener('click', () => {
       const v = el.dataset.type;
